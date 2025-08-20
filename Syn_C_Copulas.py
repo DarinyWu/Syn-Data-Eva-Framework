@@ -1,0 +1,53 @@
+from sdv.single_table import GaussianCopulaSynthesizer
+from sdv.metadata import Metadata
+import pandas as pd
+from sdv.evaluation.single_table import run_diagnostic, evaluate_quality
+from sdv.evaluation.single_table import get_column_plot
+
+metadata =  Metadata.load_from_json(
+    filepath='metadata.json')
+
+#load real_data
+real_data = pd.read_csv('Your_real_train_data.csv')
+
+synthesizer = GaussianCopulaSynthesizer(
+    metadata, # required
+    enforce_min_max_values=True,
+    enforce_rounding=True,
+    default_distribution='norm'
+)
+
+# Step 2: Train the synthesizer
+synthesizer.fit(real_data)
+
+# Step 3: Generate synthetic data
+synthetic_data = synthesizer.sample()
+#save your syn data if necessary
+synthetic_data.to_csv('syn_trip_copulas.csv', index=False)
+#save your model if needed
+synthesizer.save(
+    filepath='ModelSyn_copulas.pkl'
+)
+
+# 1. perform basic validity checks
+diagnostic = run_diagnostic(real_data, synthetic_data, metadata)
+
+# 2. measure the statistical similarity
+quality_report = evaluate_quality(real_data, synthetic_data, metadata)
+
+quality_report.get_details(property_name='Column Shapes')
+
+quality_report.get_details(property_name='Column Shapes').to_excel('report_1.xlsx')
+
+quality_report.get_details(property_name='Column Pair Trends').to_excel('report_2.xlsx')
+
+
+# 3. plot the data
+fig = get_column_plot(
+    real_data=real_data,
+    synthetic_data=synthetic_data,
+    metadata=metadata,
+    column_name='conti_1'
+)
+
+fig.show()
